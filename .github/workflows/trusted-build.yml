@@ -1,0 +1,21 @@
+name: Trusted Build (simulates push to canary)
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted]
+    env:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          echo "Running trusted build on $(hostname)"
+          echo "Runner name: $RUNNER_NAME"
+          echo "DEPLOY_TOKEN is set: $([ -n "$DEPLOY_TOKEN" ] && echo YES || echo NO)"
+          echo "NPM_TOKEN is set: $([ -n "$NPM_TOKEN" ] && echo YES || echo NO)"
+          echo "Build complete."

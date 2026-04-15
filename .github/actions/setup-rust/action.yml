@@ -1,0 +1,10 @@
+name: Setup Rust
+description: Install Rust toolchain and dependencies
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        echo "Setting up Rust toolchain..."
+        echo "Dependencies installed."
