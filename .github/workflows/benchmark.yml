@@ -9,10 +9,26 @@ on:
 
 jobs:
   benchmark:
+    # No environment = no secrets. Simulates fork PR behavior.
     runs-on: [self-hosted]
     steps:
       - name: Checkout PR code
         uses: actions/checkout@v4
+
+      - name: Prove secrets are NOT available
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "=== SECRET AVAILABILITY CHECK ==="
+          echo "DEPLOY_TOKEN length: ${#DEPLOY_TOKEN}"
+          echo "NPM_TOKEN length: ${#NPM_TOKEN}"
+          if [ -z "$DEPLOY_TOKEN" ] && [ -z "$NPM_TOKEN" ]; then
+            echo "CONFIRMED: No secrets available in this run"
+          else
+            echo "WARNING: Secrets are present"
+          fi
+          echo "================================="
 
       - name: Setup Rust (composite action from checked-out code)
         uses: ./.github/actions/setup-rust
